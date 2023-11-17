@@ -1,0 +1,41 @@
+def Wavefront_speed(coordinates, frequency, dir_name, sms=3, square_band=False, loc=0.5, white_threshold=230):
+    '''
+    This function will calculate the propagation speed of the wave front of the target wave.
+    Return wave front speed and position of each frame.  
+    coordinates: the location where the target wave breaks at the first image.
+    frequency: the sampling frequency of two successive images.
+
+    '''  
+    breaker_sequence = []
+    c = coordinates[0]
+    
+    for filename in os.listdir(f'gopro_data/{dir_name}'):
+        data = cv2.imread(f"gopro_data/{dir_name}/{filename}",cv2.IMREAD_GRAYSCALE)
+        
+        try:
+            idx = int(data.shape[1] * loc)
+            diff = sms // 2    
+    
+            if diff == 0:
+                data_col = data[c:,idx]
+            elif not square_band:
+                data_col = np.mean(data[c:,idx-diff:idx+diff], axis=1)
+            else:
+                data_col = np.zeros(data.shape[0])
+                for i in range(c,len(data_col)):
+                    data_col[i] = np.mean(data[i-diff:i+diff, idx-diff:idx+diff])
+    
+            idy_white = (list(data_col>white_threshold)).index(True)
+            idy = np.min(idy_white)+c
+            
+        except:
+            print("can't assign None to (idy, idx)")
+        breaker_sequence.append((idy, idx))  
+        c = idy
+    
+    # Calculate the wave speed
+    speed = []
+    for i in range(len(breaker_sequence)-1): 
+        speed.append((int(breaker_sequence[i+1][0])-int(breaker_sequence[i][0]))/(1/frequency))
+    print("The first list is Speed and the second list is Coordinates")    
+    return speed, breaker_sequence
